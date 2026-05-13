@@ -19,7 +19,7 @@ int main() {
     logger("engine initialized.");
     logger("startup successful, running.");
 
-    song.path = "C:/Users/grsma/playhead/audio/breathe_in_the_air.mp3";
+    song.path = song_path_single();
     logger("sound/song/audio filepath set.");
     
     ma_result song_status = ma_sound_init_from_file(&engine, song.path.c_str(), 0, NULL, NULL, &song.sound);
