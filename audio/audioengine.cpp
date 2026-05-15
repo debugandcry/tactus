@@ -1,25 +1,14 @@
-#define MA_ENABLE_AUDIO
-#define MINIAUDIO_IMPLEMENTATION
-#define WIN32_LEAN_AND_MEAN
-#include "data.h"
-#include "miniaudio.h"
-#include "controls.h"
-#include "helpers.h"
+#include "audioengine.h"
 
-bool song_process_running = true;
-
-int main() {
-    Music song; 
-    
-    logs.open("session_logs.txt", std::ios::app);
-    logger("log file started.");
-    
-    ma_engine engine; ma_result status = ma_engine_init(NULL, &engine);
+int initialize_audio_engine(ma_engine &engine) {
+    ma_result status = ma_engine_init(NULL, &engine);
     if (status != MA_SUCCESS) {logger("can't setup engine:" + std::to_string(status)); return -1;}
-    logger("engine initialized.");
-    logger("startup successful, running.");
+    logger("audio engine successfully initialized.");    
+    return 0;
+}
 
-    song.path = song_path_single();
+int initialize_song_single(Music &song, std::string &path, ma_engine &engine) {   
+    song.path = path;
     logger("sound/song/audio filepath set.");
     
     ma_result song_status = ma_sound_init_from_file(&engine, song.path.c_str(), 0, NULL, NULL, &song.sound);
@@ -33,18 +22,17 @@ int main() {
     
     ma_sound_start(&song.sound);
     logger("sound/song/audio playing.");
-    
-    std::thread input_handler_thread(transport_handler, std::ref(song));
-    logger("input collection thread started.");
-    while (song_process_running) {
-        rest(1000);
-    }
-    
-    input_handler_thread.join();
-    logger("input collection thread successfully closed.");
-    ma_sound_uninit(&song.sound); ma_engine_uninit(&engine);
-    logger("cleanup successful, exit.");
-    
-    logs.close();
+
     return 0;
+}
+
+void deinitialize_song_single(Music &song) {
+    if (ma_sound_is_playing(&song.sound) == MA_FALSE) {ma_sound_stop(&song.sound); logger("sound/song/audio stopped");}
+    ma_sound_uninit(&song.sound);
+    logger("sound/song/audio object successfully deinitialized.");
+}
+
+void deinitialize_audio_engine(ma_engine &engine) {
+    ma_engine_uninit(&engine);
+    logger("audio engine successfully deinitialized");
 }

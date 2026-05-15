@@ -48,7 +48,7 @@ void update_query(int key) {
 } 
 
 void transport_handler(Music &song) {
-    while (song_process_running) {
+    while (program_running) {
         
         update_query(pause_play_key);
         update_query(exit_key);
@@ -58,7 +58,7 @@ void transport_handler(Music &song) {
         
         if (pressed_query(exit_key)) {
             ma_sound_stop(&song.sound);
-            song_process_running = false;
+            program_running = false;
             logger("'esc' key pressed, proceeding to exit.");
         }
         

@@ -3,8 +3,17 @@
 
 std::ofstream logs;
 
+void clearscreen() {
+    std::system("cls");
+}
+
 void rest(int ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+void initialize_logger() {
+    logs.open("session_logs.txt", std::ios::app);
+    logger("log file started.");
 }
 
 void logger(const std::string& msg) {
@@ -17,4 +26,8 @@ void logger(const std::string& msg) {
         << std::setw(2) << std::setfill('0') << local_time->tm_sec << ":" 
         << " > " << msg << "\n";
     std::cout << "> " << msg << "\n";
+}
+
+void deinitialize_logger() {
+    logs.close();
 }

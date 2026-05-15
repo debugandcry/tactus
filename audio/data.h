@@ -1,6 +1,7 @@
 #pragma once
 #include "miniaudio.h"
 #include <string>
+#include <cstdlib>
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -12,7 +13,7 @@
 #include <windows.h>
 #include <commdlg.h>
 
-extern bool song_process_running;
+extern bool program_running;
 
 struct Music {
     ma_sound sound;
