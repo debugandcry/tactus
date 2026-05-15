@@ -3,6 +3,7 @@
 
 extern std::ofstream logs;
 
+
 void clearscreen();
 
 void rest(int ms);

@@ -13,3 +13,7 @@ int initialize_song_single(Music &song, std::string &path, ma_engine &engine);
 void deinitialize_song_single(Music &song);
 
 void deinitialize_audio_engine(ma_engine &engine);
+
+void seek_song_forward_single(Music &song, ma_engine &engine);
+
+void seek_song_backward_single(Music &song, ma_engine &engine);

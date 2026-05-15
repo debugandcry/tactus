@@ -13,7 +13,13 @@
 #include <windows.h>
 #include <commdlg.h>
 
+extern bool seek_song_forward;
+extern bool seek_song_backward;
+extern bool seek_song_forward_success;
+extern bool seek_song_backward_success;
 extern bool program_running;
+extern int song_number;
+extern std::vector<std::string> queue;
 
 struct Music {
     ma_sound sound;

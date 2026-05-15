@@ -29,5 +29,6 @@ void logger(const std::string& msg) {
 }
 
 void deinitialize_logger() {
+    logger("deinitializing logs.");
     logs.close();
 }
