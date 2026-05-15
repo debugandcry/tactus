@@ -1,6 +1,5 @@
 *breathe_in_the_air.mp3
 *.exe
 builds/
-miniaudio.h
 session_logs.txt
 LICENSE
