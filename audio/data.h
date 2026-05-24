@@ -13,11 +13,8 @@
 #include <windows.h>
 #include <commdlg.h>
 
-extern bool seek_song_forward;
-extern bool seek_song_backward;
-extern bool seek_song_forward_success;
-extern bool seek_song_backward_success;
 extern bool program_running;
+extern bool logging_enabled;
 extern int song_number;
 extern std::vector<std::string> queue;
 
@@ -36,8 +33,14 @@ struct Music {
     bool state;
 };
 
-
-struct KeyStates {
-    bool current;
-    bool previous;
+struct Song_Controls {
+    bool stop;
+    bool play_pause;
+    bool restart;
+    bool seek_forward;
+    bool seek_backward;
+    bool skip_forward;
+    bool skip_backward;
 };
+
+extern Song_Controls controls;

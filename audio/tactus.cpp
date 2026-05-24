@@ -8,6 +8,7 @@
 #include "audioengine.h"
 
 Music song;
+Song_Controls controls;
 
 ma_engine engine;
 
@@ -17,6 +18,7 @@ int song_number;
 
 bool initialized_song = false;
 bool program_running = true;
+bool logging_enabled = true;
 
 int main() {
     song_number = 0;
@@ -29,32 +31,43 @@ int main() {
     if (queue[song_number] == "") {logger("path is empty, user pressed cancel, or invalid file selected. exitting..."); return 0;}
     initialize_song_single(song, queue[song_number], engine);
     initialized_song = true;
-    std::thread input_thread(transport_handler, std::ref(song), std::ref(engine));
+    std::thread input_thread(transport_handler);
     while (program_running) {
-        if (seek_song_forward) {
-            seek_song_forward_single(song, engine);
+        if (controls.play_pause) {
+            play_pause_song(song);
         }
 
-        else if (seek_song_backward) {
-            seek_song_backward_single(song, engine);
+        else if (controls.restart) {
+            restart_song(song);
+        }
+
+        else if (controls.stop) {
+            stop_song(song);
+        }
+
+        else if (controls.seek_forward) {
+            seek_forward(song);
+            rest(197);
+        }
+
+        else if (controls.seek_backward) {
+            seek_backward(song);
+            rest(197);
+        }
+
+        else if (controls.skip_forward) {
+            skip_forward_single(song);
+        }
+
+        else if (controls.skip_backward) {
+            skip_backward_single(song);
         }
 
         else if (ma_sound_at_end(&song.sound) == MA_TRUE) {            
-            if (initialized_song) { 
-            deinitialize_song_single(song);
-            song_number++; 
-            initialized_song = false;
-            }
-            if (song_number >= queue.size()) {
-                program_running = false;
-                break;
-            }
-            if (!initialized_song) {
-            initialize_song_single(song, queue[song_number], engine);
-            initialized_song = true;
-            }
+            skip_forward_single(song);
         }
-        rest(5);
+        
+        rest(3);
     }
     input_thread.join();
     if (initialized_song) {deinitialize_song_single(song);}

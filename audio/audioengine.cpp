@@ -1,4 +1,5 @@
 #include "audioengine.h"
+#include "helpers.h"
 
 int initialize_audio_engine(ma_engine &engine) {
     ma_result status = ma_engine_init(NULL, &engine);
@@ -27,7 +28,7 @@ int initialize_song_single(Music &song, std::string &path, ma_engine &engine) {
 }
 
 void deinitialize_song_single(Music &song) {
-    if (ma_sound_is_playing(&song.sound) == MA_FALSE) {ma_sound_stop(&song.sound); logger("sound/song/audio stopped");}
+    stop_song(song);
     ma_sound_uninit(&song.sound);
     logger("sound/song/audio object successfully deinitialized.");
 }
@@ -37,34 +38,103 @@ void deinitialize_audio_engine(ma_engine &engine) {
     logger("audio engine successfully deinitialized");
 }
 
-void seek_song_forward_single(Music &song, ma_engine &engine) {
+void stop_song(Music &song) {
+    ma_sound_stop(&song.sound);
+    logger("sound/song/audio stopped");
+}
+
+void play_pause_song(Music &song) {
+    if (ma_sound_is_playing(&song.sound) == MA_TRUE) {
+        ma_sound_stop(&song.sound);
+        logger("successfully paused.");
+    }
+    else {
+        ma_sound_start(&song.sound);
+        logger("successfully playing.");
+    }
+
+    controls.play_pause = false;
+}
+
+void restart_song(Music &song) {
+    ma_sound_seek_to_pcm_frame(&song.sound, 0);
+    
+    logger("successfully restarted.");
+    controls.restart = false;
+}
+
+void seek_forward(Music &song) {
+    ma_uint64 current_frame;
+    ma_sound_get_cursor_in_pcm_frames(&song.sound, &current_frame);
+    current_frame += song.skipframes; 
+    
+    if (current_frame <= song.totalframes) {
+        ma_sound_seek_to_pcm_frame(&song.sound, current_frame);
+        logger("seek forward key pressed, successfully seeked 10 seconds forward.");
+    }
+    
+    else {
+        if (song.totalframes > (song.skipframes / 2)) {
+            ma_sound_seek_to_pcm_frame(&song.sound, song.totalframes - (song.skipframes / 2));
+            logger("went out of scope, playing the last 5 seconds.");
+        }
+        
+        else {
+            ma_sound_seek_to_pcm_frame(&song.sound, song.totalframes - 1);
+            logger("the idiot is playing a file less than 5 seconds, he deserves it, playing from last frame.");
+        }
+    }
+
+    controls.seek_forward = false;
+}
+
+void seek_backward(Music &song) {
+    ma_uint64 current_frame;
+    ma_sound_get_cursor_in_pcm_frames(&song.sound, &current_frame);
+
+    if (song.skipframes < current_frame) {
+        ma_sound_seek_to_pcm_frame(&song.sound, current_frame - song.skipframes);
+        logger("seek backward key pressed, successfully seeked 10 seconds backward.");
+    }
+
+    else {
+        ma_sound_seek_to_pcm_frame(&song.sound, 0);
+        logger("went out of scope, playing from frame 0.");
+    }
+
+    controls.seek_backward = false;
+}
+
+void skip_forward_single(Music &song) {
     if ((song_number + 1) < queue.size()) {
         ma_sound_stop(&song.sound);
         deinitialize_song_single(song);
         song_number++;
         initialize_song_single(song, queue[song_number], engine);
-        seek_song_forward = false;
-        seek_song_forward_success = true;
+        logger("successfully stopped number " + std::to_string(song_number - 1) + " and started number " + std::to_string(song_number));
     }
-    else if (song_number >= queue.size()) {
-        ma_sound_seek_to_pcm_frame(&song.sound, 0);
-        seek_song_forward = false;
-        seek_song_forward_success = false;
+    
+    else if ((song_number + 1) >= queue.size()) {
+        ma_sound_seek_to_pcm_frame(&song.sound, song.totalframes - 1);
+        logger("went out of scope, playing song from last frame.");
     }
+
+    controls.skip_forward = false;
 }
 
-void seek_song_backward_single(Music &song, ma_engine &engine) {
+void skip_backward_single(Music &song) {
     if (song_number > 0) {
         ma_sound_stop(&song.sound);
         deinitialize_song_single(song);
         song_number--;
         initialize_song_single(song, queue[song_number], engine);
-        seek_song_backward_success = true;
-        seek_song_backward = false;
+        logger("successfully stopped number " + std::to_string(song_number + 1) + " and started number " + std::to_string(song_number));
     }
+    
     else if (song_number <= 0) {
         ma_sound_seek_to_pcm_frame(&song.sound, 0);
-        seek_song_backward_success = false;
-        seek_song_backward = false;
+        logger("went out of scope, playing song from frame 0.");
     }
+
+    controls.skip_backward = false;
 }

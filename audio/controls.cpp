@@ -1,27 +1,21 @@
 #include "data.h"
 #include "helpers.h"
 #include "controls.h"
-#include "audioengine.h"
 
-/*for the function song_path_single, you need the dialog right?
-so the header file isnt enough, so on compilation, version 0.0.6 (this one) and onwards...
-you manually need to add in a "-lcomdlg32" flag.*/
+/*for the function `song_path_single`, you need the dialog right? of course you do.
+so the header file isnt enough, so on compilation, version 0.0.6 and onwards...
+...you manually need to add in an "-lcomdlg32" flag.*/
 
-int pause_play_key = VK_SPACE;
+int play_pause_key = VK_SPACE; 
 int exit_key = VK_ESCAPE;
 int restart_key = 'R';
 int seek_forward_key = VK_RIGHT;
 int seek_backward_key = VK_LEFT;
-int seek_song_forward_key = VK_UP;
-int seek_song_backward_key = VK_DOWN;
-bool seek_song_forward = false;
-bool seek_song_backward = false;
-bool seek_song_forward_success = false;
-bool seek_song_backward_success = false;
-
-KeyStates keys[256];
+int skip_forward_key = VK_UP;
+int skip_backward_key = VK_DOWN;
 
 void song_path_query(std::vector<std::string> &queue) {
+    
     wchar_t filepath[40960] = L"";
     
     OPENFILENAMEW dialog = {};
@@ -36,6 +30,7 @@ void song_path_query(std::vector<std::string> &queue) {
     wchar_t* crawler = &filepath[0];
     std::wstring dir = crawler;
     crawler += dir.length() + 1;
+    
     if (*crawler == L'\0') {
         int projected_size = WideCharToMultiByte(CP_UTF8, 0, dir.c_str(), -1, NULL, 0, NULL, NULL);
         if (projected_size == 0) {return;}
@@ -47,7 +42,9 @@ void song_path_query(std::vector<std::string> &queue) {
         logger("successfully collected filepath " + proper_filepath);
         return;
     }
+    
     else {
+        
         while (*crawler != L'\0') {
             std::wstring current_filename = crawler;
             std::wstring current_filepath = dir + L"\\" + current_filename; 
@@ -65,98 +62,56 @@ void song_path_query(std::vector<std::string> &queue) {
     }
 }
 
-bool pressed_query(int keyval) {
-    return keys[keyval].current && !keys[keyval].previous;
-}
-
-void update_query(int key) {
-    keys[key].previous = keys[key].current;
-    keys[key].current = GetAsyncKeyState(key) & 0x8000;
-} 
-
-void transport_handler(Music &song, ma_engine &engine) {
+void transport_handler() {
+        
+    HANDLE inputs = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD console_mode;
+    GetConsoleMode(inputs, &console_mode);
+    console_mode &= ~ENABLE_LINE_INPUT;
+    console_mode &= ~ENABLE_ECHO_INPUT;
+    SetConsoleMode(inputs, console_mode);   
+    INPUT_RECORD event;
+    DWORD events_read;
+        
     while (program_running) {
-        
-        update_query(pause_play_key);
-        update_query(exit_key);
-        update_query(restart_key);
-        update_query(seek_forward_key);
-        update_query(seek_backward_key);
-        update_query(seek_song_forward_key);
-        update_query(seek_song_backward_key);
-        
-        if (pressed_query(exit_key)) {
-            ma_sound_stop(&song.sound);
-            program_running = false;
-            logger("'esc' key pressed, proceeding to exit.");
-        }
-        
-        else if (pressed_query(pause_play_key)) {
-            if (ma_sound_is_playing(&song.sound) == MA_TRUE){
-                ma_sound_stop(&song.sound);
-                logger("spacebar pressed, audio playback paused.");    
-            }
-            else {
-                ma_sound_start(&song.sound);
-                logger("spacebar pressed, audio playback resumed.");
-            }
-        }
-
-        else if (pressed_query(restart_key)) {
-            ma_sound_stop(&song.sound);
-            ma_sound_seek_to_pcm_frame(&song.sound, 0); 
-            ma_sound_start(&song.sound);
-            logger("'r' key pressed, audio restarted from 00:00:00, or pcm frame 0.");
-        }
-        
-        else if (pressed_query(seek_song_forward_key)) {
-            seek_song_forward = true;
-            if (seek_song_forward_success) {
-                logger("up arrow key pressed, deinitialized song " + std::to_string(song_number - 1) + " and initialized song " + std::to_string(song_number));
-            }
-            else if (!seek_song_forward_success) {
-                logger("up arrow key pressed, but to seek forward in songs went out of scope, resorted to playing the last/current song again from the start.");
-            }
-        }
-
-        else if (pressed_query(seek_song_backward_key)) {
-            seek_song_backward = true;
-            if (seek_song_backward_success) {
-                logger("down arrow key pressed, deinitialized song " + std::to_string(song_number + 1) + " and initialized song " + std::to_string(song_number));
-            }
-            else if (!seek_song_backward_success) {
-                logger("down arrow key pressed, but to seek backward in songs went out of scope, resorted to playing the first/current song again from the start.");
-            }
-        }
-
-        else if (keys[seek_forward_key].current) {
-            ma_uint64 current_frame;
-            ma_sound_get_cursor_in_pcm_frames(&song.sound, &current_frame);
-            if ((current_frame + song.skipframes) < song.totalframes) {
-                    ma_sound_seek_to_pcm_frame(&song.sound, (current_frame + song.skipframes));
-                    logger("right arrow key pressed, seeked 10 seconds forward into audio.");
+        ReadConsoleInputW(inputs, &event, 1, &events_read);
+        if (event.EventType == KEY_EVENT) {
+            KEY_EVENT_RECORD key = event.Event.KeyEvent;
+                
+            if (key.bKeyDown) {
+                    
+                if (key.wVirtualKeyCode == play_pause_key && key.wRepeatCount == 1) {
+                    controls.play_pause = true;
+                    logger("play/pause pressed, requesting play/pause.");
                 }
-                else {
-                    ma_sound_seek_to_pcm_frame(&song.sound, song.totalframes - song.sample_rate);
-                    logger("right arrow key pressed, but skipping 10 seconds forward went out of audio scope, resorted to playing the last second of audio.");
+                    
+                else if (key.wVirtualKeyCode == exit_key && key.wRepeatCount == 1) {
+                    controls.stop = true;
+                    program_running = false;
+                    logger("exit pressed, requesting exit.");
                 }
-            rest(230);
-        }
-
-        else if (keys[seek_backward_key].current) {
-            ma_uint64 current_frame;
-            ma_sound_get_cursor_in_pcm_frames(&song.sound, &current_frame);
-            if (current_frame > song.skipframes) {
-                    ma_sound_seek_to_pcm_frame(&song.sound, (current_frame - song.skipframes));
-                    logger("left arrow key pressed, seeked 10 seconds backward into audio.");
+                    
+                else if  (key.wVirtualKeyCode == restart_key && key.wRepeatCount == 1) {
+                    controls.restart = true;
+                    logger("restart key pressed, requesting current song restart.");
                 }
-                else {
-                    ma_sound_seek_to_pcm_frame(&song.sound, 0);
-                    logger("left arrow key pressed, but skipping 10 seconds backward went out of audio scope, resorted to playing from audio start.");
+                    
+                else if (key.wVirtualKeyCode == seek_forward_key && key.wRepeatCount == 1) {
+                    controls.seek_forward = true;
                 }
-            rest(230);
+                    
+                else if (key.wVirtualKeyCode == seek_backward_key && key.wRepeatCount == 1) {
+                    controls.seek_backward = true;
+                }
+                    
+                else if (key.wVirtualKeyCode == skip_forward_key && key.wRepeatCount == 1) {
+                    controls.skip_forward = true;
+                }
+                    
+                else if (key.wVirtualKeyCode == skip_backward_key && key.wRepeatCount == 1) {
+                    controls.skip_backward = true;
+                }
             }
-
-        rest(20);
+        }
     }
 }
