@@ -6,8 +6,8 @@
 #include "controls.h"
 #include "helpers.h"
 #include "audioengine.h"
+#include "preloader.h"
 
-Music song;
 Song_Controls controls;
 
 ma_engine engine;
@@ -19,6 +19,7 @@ int song_number;
 bool initialized_song = false;
 bool program_running = true;
 bool logging_enabled = true;
+bool preloader = true;
 
 int main() {
     song_number = 0;
@@ -29,48 +30,68 @@ int main() {
     song_path_query(queue);
     if (queue.empty()) {logger("path is empty, user pressed cancel, or invalid file selected. exitting..."); return 0;}
     if (queue[song_number] == "") {logger("path is empty, user pressed cancel, or invalid file selected. exitting..."); return 0;}
-    initialize_song_single(song, queue[song_number], engine);
-    initialized_song = true;
+    preload_slots(preloader);
     std::thread input_thread(transport_handler);
     while (program_running) {
         if (controls.play_pause) {
-            play_pause_song(song);
+            play_pause_song(current->song);
         }
 
         else if (controls.restart) {
-            restart_song(song);
+            restart_song(current->song);
         }
 
         else if (controls.stop) {
-            stop_song(song);
+            stop_song(current->song);
         }
 
         else if (controls.seek_forward) {
-            seek_forward(song);
+            seek_forward(current->song);
             rest(197);
         }
 
         else if (controls.seek_backward) {
-            seek_backward(song);
+            seek_backward(current->song);
             rest(197);
         }
 
         else if (controls.skip_forward) {
-            skip_forward_single(song);
+            if (!preloader) {
+                skip_forward_single(current->song);
+            }
+            else {
+                rotate_slots();
+                controls.skip_forward = false;
+            }
+            rest(197);
         }
 
         else if (controls.skip_backward) {
-            skip_backward_single(song);
+            if (!preloader) {
+                skip_backward_single(current->song);
+            }
+            else {
+                unrotate_slots();
+                controls.skip_backward = false;
+            }
+            rest(197);
         }
 
-        else if (ma_sound_at_end(&song.sound) == MA_TRUE) {            
-            skip_forward_single(song);
+        else if (ma_sound_at_end(&current->song.sound) == MA_TRUE) {
+            if (!preloader) { 
+                skip_forward_single(current->song);
+            }
+            else {
+                rotate_slots();
+            }
         }
         
         rest(3);
+    
     }
+    
     input_thread.join();
-    if (initialized_song) {deinitialize_song_single(song);}
+    reset_slots();
     deinitialize_audio_engine(engine);
     deinitialize_logger();
     return 0;

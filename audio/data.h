@@ -33,6 +33,13 @@ struct Music {
     bool state;
 };
 
+struct Slot {
+    Music song;
+    bool loaded = false;
+    int queue_index = -1;
+};
+
+
 struct Song_Controls {
     bool stop;
     bool play_pause;

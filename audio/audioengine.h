@@ -8,7 +8,7 @@ extern ma_engine engine;
 
 int initialize_audio_engine(ma_engine &engine);
 
-int initialize_song_single(Music &song, std::string &path, ma_engine &engine);
+int initialize_song_single(Music &song, std::string &path, ma_engine &engine, bool autoplay);
 
 void deinitialize_song_single(Music &song);
 
